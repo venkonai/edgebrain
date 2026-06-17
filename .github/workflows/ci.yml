@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  benchmark-validate:
+    name: Validate Benchmark Schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate benchmark result files
+        run: |
+          python -c "
+          import json, glob, sys
+          required = ['device', 'model', 'tokens_per_sec', 'latency_ms', 'ram_mb']
+          files = glob.glob('benchmarks/**/*.json', recursive=True)
+          for f in files:
+              data = json.load(open(f))
+              missing = [k for k in required if k not in data]
+              if missing:
+                  print(f'ERROR {f}: missing {missing}')
+                  sys.exit(1)
+          print(f'Validated {len(files)} benchmark files')
+          "
+
+  docs-check:
+    name: Docs Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check internal links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
